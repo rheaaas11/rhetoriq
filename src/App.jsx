@@ -4,7 +4,7 @@ import { useState, useRef, useCallback, useEffect } from "react";
 
 const SYSTEM_PROMPT = `You are an expert linguistic analyst and speech coach with deep knowledge of rhetoric, persuasion theory (Logos, Ethos, Pathos), syntax analysis, pragmatics, ELL frameworks, register, and audience awareness.
 
-CRITICAL INSTRUCTION: Return ONLY a valid, complete JSON object. No markdown fences, no preamble, no text after. Keep all string values concise (under 150 words each).
+CRITICAL INSTRUCTION: Return ONLY a valid, complete JSON object. No markdown fences, no preamble, no text after. Keep all string values concise (under 150 words each). ALL scores must be integers out of 100 (e.g. 72, 85, 45). Do NOT use decimals or scores out of 10.
 
 {
   "overview": { "wordCount":0,"sentenceCount":0,"avgSentenceLength":0,"readabilityLevel":"","estimatedDeliveryTime":"","detectedEvent":"","detectedFormality":"","detectedPurpose":"","detectedAudience":"","overallScore":0,"summary":"" },
