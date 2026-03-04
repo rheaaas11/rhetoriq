@@ -17,10 +17,3 @@ export default async function handler(req, res) {
   const data = await response.json();
   res.status(200).json(data);
 }
-```
-
-**3. Push to GitHub:**
-```
-git add .
-git commit -m "add api proxy"
-git push
