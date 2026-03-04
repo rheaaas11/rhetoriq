@@ -2,12 +2,45 @@ import { useState, useRef, useCallback, useEffect } from "react";
 
 // ── Prompts ──────────────────────────────────────────────────────────────────
 
-const SYSTEM_PROMPT = `You are an expert linguistic analyst and speech coach with deep knowledge of rhetoric, persuasion theory (Logos, Ethos, Pathos), syntax analysis, pragmatics, ELL frameworks, register, and audience awareness.
+const SYSTEM_PROMPT = `You are a world-class linguistic analyst, rhetoric professor, and speech coach. You have deep expertise in:
+- Aristotelian rhetoric (Logos, Ethos, Pathos) and their subcategories
+- English Language & Linguistics (ELL): morphology, syntax, semantics, pragmatics, discourse analysis
+- Stylistics: register, tone, voice, modality, hedging, intensifiers, nominalization
+- Cohesion devices: anaphora, cataphora, ellipsis, substitution, conjunctive relations
+- Persuasive devices: tricolon, anaphora, epistrophe, antithesis, rhetorical questions, hyperbole, understatement
+- Sentence-level analysis: clause types, sentence variety, passive vs active voice, sentence length variation
+- Lexical density, Flesch-Kincaid readability, CEFR vocabulary levels
+- Audience adaptation, context-appropriateness, pragmatic force
 
-CRITICAL INSTRUCTION: Return ONLY a valid, complete JSON object. No markdown fences, no preamble, no text after. Keep all string values concise (under 150 words each). ALL scores must be integers out of 100 (e.g. 72, 85, 45). Do NOT use decimals or scores out of 10.
+SCORING RULES — CRITICAL:
+- ALL scores are integers out of 100. Never use decimals. Never score out of 10.
+- Scores must genuinely reflect the speech quality — do NOT default to 72. Be precise and varied.
+- A weak speech scores 30-50. An average speech scores 55-70. A strong speech scores 75-90. An exceptional speech scores 90+.
+- Each speech must receive DIFFERENT scores across categories based on actual strengths/weaknesses.
+
+ANALYSIS RULES:
+- Be specific — always quote actual lines from the speech when giving examples
+- Use proper linguistic terminology (e.g. "nominalization", "epistrophe", "hedging", "modality", "lexical field")
+- Give genuinely actionable suggestions with concrete rewritten examples
+- Identify both strengths AND weaknesses — do not be generically positive
+- The enhancedScript must be a FULL rewrite of the entire speech with all improvements applied
+
+CRITICAL INSTRUCTION: Return ONLY a valid, complete JSON object. No markdown fences, no preamble, no text after.
 
 {
-  "overview": { "wordCount":0,"sentenceCount":0,"avgSentenceLength":0,"readabilityLevel":"","estimatedDeliveryTime":"","detectedEvent":"","detectedFormality":"","detectedPurpose":"","detectedAudience":"","overallScore":0,"summary":"" },
+  "overview": {
+    "wordCount":0,
+    "sentenceCount":0,
+    "avgSentenceLength":0,
+    "readabilityLevel":"",
+    "estimatedDeliveryTime":"",
+    "detectedEvent":"",
+    "detectedFormality":"",
+    "detectedPurpose":"",
+    "detectedAudience":"",
+    "overallScore":0,
+    "summary":""
+  },
   "persuasion": {
     "overallPersuasivenessScore":0,
     "logos":{"score":0,"analysis":"","instances":[{"text":"","comment":""}],"suggestions":[""]},
@@ -15,20 +48,58 @@ CRITICAL INSTRUCTION: Return ONLY a valid, complete JSON object. No markdown fen
     "pathos":{"score":0,"analysis":"","instances":[{"text":"","comment":""}],"suggestions":[""]}
   },
   "linguistic": {
-    "syntax":{"score":0,"analysis":"","patterns":[""],"suggestions":[""]},
-    "lexicalChoices":{"score":0,"analysis":"","powerWords":[""],"weakWords":[{"word":"","suggestion":""}],"suggestions":[""]},
+    "syntax":{
+      "score":0,
+      "analysis":"",
+      "patterns":[""],
+      "deviceAnalysis":[{"device":"","example":"","effect":"","suggestion":""}],
+      "suggestions":[""]
+    },
+    "lexicalChoices":{
+      "score":0,
+      "analysis":"",
+      "powerWords":[""],
+      "weakWords":[{"word":"","suggestion":"","reason":""}],
+      "lexicalDensity":"",
+      "vocabularyLevel":"",
+      "suggestions":[""]
+    },
     "register":{"current":"","appropriate":true,"analysis":"","suggestion":""},
-    "cohesion":{"score":0,"analysis":"","suggestions":[""]}
+    "cohesion":{
+      "score":0,
+      "analysis":"",
+      "devicesFound":[""],
+      "missingDevices":[""],
+      "suggestions":[""]
+    },
+    "styleAndVoice":{
+      "score":0,
+      "analysis":"",
+      "tone":"",
+      "modality":"",
+      "activeVsPassive":"",
+      "suggestions":[""]
+    }
   },
-  "improvements":[{"priority":"high","category":"","originalText":"","improvedText":"","explanation":""}],
+  "improvements":[{"priority":"high","category":"","originalText":"","improvedText":"","explanation":"","linguisticRationale":""}],
   "enhancedScript":"",
   "potentialQuestions":[{"type":"audience","question":"","tip":""},{"type":"reflective","question":"","tip":""},{"type":"critical","question":"","tip":""}]
 }
 
-Max: 3 instances per persuasion type, 5 improvements, 6 questions (2 per type).`;
+Limits: max 3 instances per persuasion type, max 6 improvements (prioritised high/medium/low), max 6 questions (2 per type). Analysis strings should be thorough — 100-200 words each.`;
 
 const buildPrompt = (speech, event, formality, purpose, audience) =>
-  `EVENT: ${event||"detect"}\nFORMALITY: ${formality||"detect"}\nPURPOSE: ${purpose||"detect"}\nAUDIENCE: ${audience||"detect"}\n\nSPEECH:\n${speech}\n\nReturn only the JSON.`;
+  `Analyse this speech with rigorous linguistic depth. Be specific, quote lines, use proper terminology.
+
+EVENT: ${event||"detect from context"}
+FORMALITY: ${formality||"detect from context"}
+PURPOSE: ${purpose||"detect from context"}
+AUDIENCE: ${audience||"detect from context"}
+
+SPEECH:
+${speech}
+
+Remember: scores must be precise integers out of 100 reflecting the actual quality of THIS specific speech. Return only the JSON object.`;
 
 // ── JSON repair ───────────────────────────────────────────────────────────────
 
@@ -546,23 +617,28 @@ export default function RhetorIQ() {
               {[
                 {title:"Syntax & Sentence Structure",score:analysis.linguistic.syntax.score,body:(
                   <>
-                    <p style={{color:D?"#cbd5e1":"#374151",fontSize:"13px",lineHeight:1.7,marginBottom:"10px"}}>{analysis.linguistic.syntax.analysis}</p>
-                    {analysis.linguistic.syntax.patterns?.length>0&&<div style={{marginBottom:"10px"}}><div style={{fontSize:"9px",color:muted,letterSpacing:"0.1em",textTransform:"uppercase",marginBottom:"6px"}}>Patterns Detected</div><div style={{display:"flex",flexWrap:"wrap",gap:"6px"}}>{analysis.linguistic.syntax.patterns.map((p,i)=><span key={i} style={{background:"rgba(45,212,191,0.1)",color:"#2DD4BF",padding:"2px 8px",borderRadius:"4px",fontSize:"11px"}}>{p}</span>)}</div></div>}
+                    <p style={{color:D?"#cbd5e1":"#374151",fontSize:"13px",lineHeight:1.7,marginBottom:"12px"}}>{analysis.linguistic.syntax.analysis}</p>
+                    {analysis.linguistic.syntax.patterns?.length>0&&<div style={{marginBottom:"12px"}}><div style={{fontSize:"9px",color:muted,letterSpacing:"0.1em",textTransform:"uppercase",marginBottom:"6px"}}>Patterns & Devices Detected</div><div style={{display:"flex",flexWrap:"wrap",gap:"6px"}}>{analysis.linguistic.syntax.patterns.map((p,i)=><span key={i} style={{background:"rgba(45,212,191,0.1)",color:"#2DD4BF",padding:"2px 8px",borderRadius:"4px",fontSize:"11px"}}>{p}</span>)}</div></div>}
+                    {analysis.linguistic.syntax.deviceAnalysis?.length>0&&<div style={{marginBottom:"12px"}}><div style={{fontSize:"9px",color:muted,letterSpacing:"0.1em",textTransform:"uppercase",marginBottom:"8px"}}>Device Analysis</div>{analysis.linguistic.syntax.deviceAnalysis.map((d,i)=><div key={i} style={{background:D?"rgba(45,212,191,0.05)":"#f0fdfa",border:"1px solid rgba(45,212,191,0.2)",borderRadius:"8px",padding:"10px 12px",marginBottom:"8px"}}><div style={{display:"flex",gap:"8px",alignItems:"center",marginBottom:"4px"}}><span style={{background:"rgba(45,212,191,0.15)",color:"#2DD4BF",padding:"1px 8px",borderRadius:"4px",fontSize:"11px",fontWeight:"700"}}>{d.device}</span></div><div style={{fontSize:"12px",fontStyle:"italic",color:D?"#94a3b8":"#64748b",marginBottom:"3px"}}>"{d.example}"</div><div style={{fontSize:"12px",color:D?"#cbd5e1":"#374151",marginBottom:"3px"}}><strong>Effect:</strong> {d.effect}</div>{d.suggestion&&<div style={{fontSize:"12px",color:"#D4A853"}}>→ {d.suggestion}</div>}</div>)}</div>}
                     {analysis.linguistic.syntax.suggestions?.map((s,i)=><Sugg key={i} text={s}/>)}
                   </>
                 )},
-                {title:"Lexical Choices",score:analysis.linguistic.lexicalChoices.score,body:(
+                {title:"Lexical Choices & Vocabulary",score:analysis.linguistic.lexicalChoices.score,body:(
                   <>
-                    <p style={{color:D?"#cbd5e1":"#374151",fontSize:"13px",lineHeight:1.7,marginBottom:"10px"}}>{analysis.linguistic.lexicalChoices.analysis}</p>
-                    {analysis.linguistic.lexicalChoices.powerWords?.length>0&&<div style={{marginBottom:"11px"}}><div style={{fontSize:"9px",color:muted,letterSpacing:"0.1em",textTransform:"uppercase",marginBottom:"6px"}}>Strong Choices</div><div style={{display:"flex",flexWrap:"wrap",gap:"6px"}}>{analysis.linguistic.lexicalChoices.powerWords.map((w,i)=><span key={i} style={{background:"rgba(212,168,83,0.15)",color:"#D4A853",padding:"2px 8px",borderRadius:"4px",fontSize:"11px",fontWeight:"600"}}>{w}</span>)}</div></div>}
-                    {analysis.linguistic.lexicalChoices.weakWords?.length>0&&<div style={{marginBottom:"11px"}}><div style={{fontSize:"9px",color:muted,letterSpacing:"0.1em",textTransform:"uppercase",marginBottom:"6px"}}>Words to Strengthen</div>{analysis.linguistic.lexicalChoices.weakWords.map((w,i)=><div key={i} style={{display:"flex",alignItems:"center",gap:"9px",marginBottom:"4px",fontSize:"13px"}}><span style={{color:"#fb7185",textDecoration:"line-through"}}>{w.word}</span><span style={{color:muted}}>→</span><span style={{color:"#2DD4BF"}}>{w.suggestion}</span></div>)}</div>}
+                    <p style={{color:D?"#cbd5e1":"#374151",fontSize:"13px",lineHeight:1.7,marginBottom:"12px"}}>{analysis.linguistic.lexicalChoices.analysis}</p>
+                    {(analysis.linguistic.lexicalChoices.lexicalDensity||analysis.linguistic.lexicalChoices.vocabularyLevel)&&<div style={{display:"flex",gap:"10px",marginBottom:"12px",flexWrap:"wrap"}}>
+                      {analysis.linguistic.lexicalChoices.lexicalDensity&&<Chip label="Lexical Density" val={analysis.linguistic.lexicalChoices.lexicalDensity} bg={iBg} border={iBorder} textColor={txt}/>}
+                      {analysis.linguistic.lexicalChoices.vocabularyLevel&&<Chip label="Vocabulary Level" val={analysis.linguistic.lexicalChoices.vocabularyLevel} bg={iBg} border={iBorder} textColor={txt}/>}
+                    </div>}
+                    {analysis.linguistic.lexicalChoices.powerWords?.length>0&&<div style={{marginBottom:"11px"}}><div style={{fontSize:"9px",color:muted,letterSpacing:"0.1em",textTransform:"uppercase",marginBottom:"6px"}}>Strong Word Choices</div><div style={{display:"flex",flexWrap:"wrap",gap:"6px"}}>{analysis.linguistic.lexicalChoices.powerWords.map((w,i)=><span key={i} style={{background:"rgba(212,168,83,0.15)",color:"#D4A853",padding:"2px 8px",borderRadius:"4px",fontSize:"11px",fontWeight:"600"}}>{w}</span>)}</div></div>}
+                    {analysis.linguistic.lexicalChoices.weakWords?.length>0&&<div style={{marginBottom:"11px"}}><div style={{fontSize:"9px",color:muted,letterSpacing:"0.1em",textTransform:"uppercase",marginBottom:"6px"}}>Words to Strengthen</div>{analysis.linguistic.lexicalChoices.weakWords.map((w,i)=><div key={i} style={{background:D?"rgba(251,113,133,0.05)":"#fff5f5",border:"1px solid rgba(251,113,133,0.15)",borderRadius:"7px",padding:"8px 10px",marginBottom:"6px"}}><div style={{display:"flex",alignItems:"center",gap:"9px",marginBottom:"3px",fontSize:"13px"}}><span style={{color:"#fb7185",textDecoration:"line-through",fontWeight:"600"}}>{w.word}</span><span style={{color:muted}}>→</span><span style={{color:"#2DD4BF",fontWeight:"600"}}>{w.suggestion}</span></div>{w.reason&&<div style={{fontSize:"11px",color:muted}}>{w.reason}</div>}</div>)}</div>}
                     {analysis.linguistic.lexicalChoices.suggestions?.map((s,i)=><Sugg key={i} text={s}/>)}
                   </>
                 )},
                 {title:"Register & Tone",score:null,body:(
                   <>
-                    <div style={{display:"flex",gap:"10px",marginBottom:"10px",flexWrap:"wrap"}}>
-                      <Chip label="Current" val={analysis.linguistic.register.current} bg={iBg} border={iBorder} textColor={txt}/>
+                    <div style={{display:"flex",gap:"10px",marginBottom:"12px",flexWrap:"wrap"}}>
+                      <Chip label="Current Register" val={analysis.linguistic.register.current} bg={iBg} border={iBorder} textColor={txt}/>
                       <Chip label="Appropriate?" val={analysis.linguistic.register.appropriate?"Yes ✓":"Needs adjustment"} color={analysis.linguistic.register.appropriate?"#2DD4BF":"#fb7185"} bg={iBg} border={iBorder} textColor={txt}/>
                     </div>
                     <p style={{color:D?"#cbd5e1":"#374151",fontSize:"13px",lineHeight:1.7,marginBottom:"8px"}}>{analysis.linguistic.register.analysis}</p>
@@ -571,8 +647,21 @@ export default function RhetorIQ() {
                 )},
                 {title:"Cohesion & Flow",score:analysis.linguistic.cohesion.score,body:(
                   <>
-                    <p style={{color:D?"#cbd5e1":"#374151",fontSize:"13px",lineHeight:1.7,marginBottom:"10px"}}>{analysis.linguistic.cohesion.analysis}</p>
+                    <p style={{color:D?"#cbd5e1":"#374151",fontSize:"13px",lineHeight:1.7,marginBottom:"12px"}}>{analysis.linguistic.cohesion.analysis}</p>
+                    {analysis.linguistic.cohesion.devicesFound?.filter(d=>d).length>0&&<div style={{marginBottom:"10px"}}><div style={{fontSize:"9px",color:muted,letterSpacing:"0.1em",textTransform:"uppercase",marginBottom:"6px"}}>Cohesive Devices Found</div><div style={{display:"flex",flexWrap:"wrap",gap:"6px"}}>{analysis.linguistic.cohesion.devicesFound.map((d,i)=><span key={i} style={{background:"rgba(167,139,250,0.1)",color:"#A78BFA",padding:"2px 8px",borderRadius:"4px",fontSize:"11px"}}>{d}</span>)}</div></div>}
+                    {analysis.linguistic.cohesion.missingDevices?.filter(d=>d).length>0&&<div style={{marginBottom:"10px"}}><div style={{fontSize:"9px",color:muted,letterSpacing:"0.1em",textTransform:"uppercase",marginBottom:"6px"}}>Devices to Add</div><div style={{display:"flex",flexWrap:"wrap",gap:"6px"}}>{analysis.linguistic.cohesion.missingDevices.map((d,i)=><span key={i} style={{background:"rgba(251,113,133,0.1)",color:"#fb7185",padding:"2px 8px",borderRadius:"4px",fontSize:"11px"}}>{d}</span>)}</div></div>}
                     {analysis.linguistic.cohesion.suggestions?.map((s,i)=><Sugg key={i} text={s}/>)}
+                  </>
+                )},
+                {title:"Style & Voice",score:analysis.linguistic.styleAndVoice?.score,body:(
+                  <>
+                    <p style={{color:D?"#cbd5e1":"#374151",fontSize:"13px",lineHeight:1.7,marginBottom:"12px"}}>{analysis.linguistic.styleAndVoice?.analysis}</p>
+                    {(analysis.linguistic.styleAndVoice?.tone||analysis.linguistic.styleAndVoice?.modality||analysis.linguistic.styleAndVoice?.activeVsPassive)&&<div style={{display:"flex",gap:"10px",marginBottom:"12px",flexWrap:"wrap"}}>
+                      {analysis.linguistic.styleAndVoice?.tone&&<Chip label="Tone" val={analysis.linguistic.styleAndVoice.tone} bg={iBg} border={iBorder} textColor={txt}/>}
+                      {analysis.linguistic.styleAndVoice?.modality&&<Chip label="Modality" val={analysis.linguistic.styleAndVoice.modality} bg={iBg} border={iBorder} textColor={txt}/>}
+                      {analysis.linguistic.styleAndVoice?.activeVsPassive&&<Chip label="Voice" val={analysis.linguistic.styleAndVoice.activeVsPassive} bg={iBg} border={iBorder} textColor={txt}/>}
+                    </div>}
+                    {analysis.linguistic.styleAndVoice?.suggestions?.map((s,i)=><Sugg key={i} text={s}/>)}
                   </>
                 )},
               ].map(({title,score,body})=>(
