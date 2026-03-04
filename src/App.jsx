@@ -281,7 +281,7 @@ export default function RhetorIQ() {
 
   // ── NAV ───────────────────────────────────────────────────────────────────
   const renderNav = () => (
-    <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:"36px",flexWrap:"wrap",gap:"12px"}}>
+    <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:"40px",flexWrap:"wrap",gap:"12px",width:"100%"}}>
       <div style={{display:"flex",alignItems:"center",gap:"24px"}}>
         <div>
           <div style={{fontSize:"9px",letterSpacing:"0.25em",color:"#D4A853",textTransform:"uppercase",marginBottom:"4px"}}>Linguistic Intelligence</div>
@@ -307,8 +307,8 @@ export default function RhetorIQ() {
 
   // ── HOME / ANALYSE VIEW ───────────────────────────────────────────────────
   const renderHome = () => (
-    <div style={{background:card,border:`1px solid ${border}`,borderRadius:"16px",padding:"32px"}}>
-      <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:"16px",marginBottom:"24px"}}>
+    <div style={{background:card,border:`1px solid ${border}`,borderRadius:"16px",padding:"40px"}}>
+      <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:"20px",marginBottom:"28px"}}>
         {[
           {label:"Event / Occasion",val:event,set:setEvent,ph:"e.g. TEDx Talk, Job Interview, Wedding Toast…"},
           {label:"Target Audience",val:audience,set:setAudience,ph:"e.g. Business executives, High school students…"},
@@ -445,7 +445,7 @@ export default function RhetorIQ() {
         </div>
 
         {/* Score hero */}
-        <div style={{background:card,border:`1px solid ${border}`,borderRadius:"16px",padding:"24px 28px",marginBottom:"14px",display:"flex",alignItems:"center",gap:"24px",flexWrap:"wrap"}}>
+        <div style={{background:card,border:`1px solid ${border}`,borderRadius:"16px",padding:"28px 36px",marginBottom:"14px",display:"flex",alignItems:"center",gap:"32px",flexWrap:"wrap"}}>
           <div style={{flex:1,minWidth:"170px"}}>
             <div style={{fontSize:"11px",color:muted,marginBottom:"5px"}}>
               {[analysis.overview.detectedEvent,analysis.overview.detectedFormality,analysis.overview.estimatedDeliveryTime].filter(Boolean).join(" · ")}
@@ -674,9 +674,9 @@ export default function RhetorIQ() {
 
   // ── Root render ───────────────────────────────────────────────────────────
   return (
-    <div style={{minHeight:"100vh",background:bg,fontFamily:"Georgia,serif",color:txt,transition:"background 0.3s"}}>
+    <div style={{minHeight:"100vh",width:"100%",background:bg,fontFamily:"Georgia,serif",color:txt,transition:"background 0.3s"}}>
       {D&&<div style={{position:"fixed",inset:0,pointerEvents:"none",zIndex:0,background:"radial-gradient(ellipse at 20% 20%,rgba(212,168,83,0.05) 0%,transparent 60%),radial-gradient(ellipse at 80% 80%,rgba(45,212,191,0.03) 0%,transparent 60%)"}}/>}
-      <div style={{position:"relative",zIndex:1,maxWidth:"1100px",margin:"0 auto",padding:"32px 20px"}}>
+      <div style={{position:"relative",zIndex:1,width:"100%",maxWidth:"1200px",margin:"0 auto",padding:"32px 40px"}}>
         {renderNav()}
         {loading && renderLoading()}
         {!loading && (view==="home" || view==="analyse") && renderHome()}
@@ -686,4 +686,3 @@ export default function RhetorIQ() {
     </div>
   );
 }
-
